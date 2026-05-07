@@ -1,108 +1,115 @@
 /**
  * Web 端组件测试 · vitest + @testing-library/react
  *
- * 7 件事:
- * - 渲染输出 (children / variant / size 反映)
- * - 用户交互 (click)
- * - 状态变化 (loading / disabled)
- * - 受控行为 (handler 触发)
- * - 边界 (空 children · ariaLabel)
- * - 防误触 (disabled / loading 不触发)
- * - icon 渲染
+ * 6+ cases:
+ * - 渲染 3 个圆点
+ * - variant dots / pulse / wave class 反映
+ * - size 反映 dot 大小 (CSS variable / class)
+ * - color 反映 (inline CSS variable)
+ * - inBubble 切换 bg (class on/off)
+ * - aria-label 默认 / 自定义
  */
 
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, it, expect } from 'vitest'
+import { render, screen } from '@testing-library/react'
 import { TypingIndicator } from '../src/TypingIndicator'
-import { buttonScenarios } from '../src/TypingIndicator.behavior'
+import { DEFAULT_ARIA_LABEL, allSizes, allVariants } from '../src/TypingIndicator.behavior'
 
 describe('TypingIndicator (Web) · 渲染', () => {
-  it('渲染 children', () => {
-    render(<TypingIndicator>Click me</TypingIndicator>)
-    expect(screen.getByRole('button', { name: 'Click me' })).toBeInTheDocument()
+  it('渲染 3 个圆点', () => {
+    const { container } = render(<TypingIndicator />)
+    const dots = container.querySelectorAll('.ak-typing-indicator__dot')
+    expect(dots).toHaveLength(3)
   })
 
-  it('应用 variant class', () => {
-    const { container } = render(<TypingIndicator variant="destructive">删除</TypingIndicator>)
-    expect(container.querySelector('.ak-typing-indicator--destructive')).toBeTruthy()
-  })
-
-  it('应用 size class', () => {
-    const { container } = render(<TypingIndicator size="lg">Big</TypingIndicator>)
-    expect(container.querySelector('.ak-typing-indicator--lg')).toBeTruthy()
-  })
-
-  it('fullWidth 加 class', () => {
-    const { container } = render(<TypingIndicator fullWidth>占满</TypingIndicator>)
-    expect(container.querySelector('.ak-typing-indicator--full-width')).toBeTruthy()
-  })
-
-  it('icon-only · ariaLabel 必填 · 不报 a11y 错', () => {
-    render(<TypingIndicator ariaLabel="搜索" iconLeft="🔍" />)
-    expect(screen.getByRole('button', { name: '搜索' })).toBeInTheDocument()
+  it('根容器有 ak-typing-indicator class', () => {
+    const { container } = render(<TypingIndicator />)
+    expect(container.querySelector('.ak-typing-indicator')).toBeTruthy()
   })
 })
 
-describe('TypingIndicator (Web) · 状态', () => {
-  it('disabled 加 attribute', () => {
-    render(<TypingIndicator disabled>禁用</TypingIndicator>)
-    expect(screen.getByRole('button')).toBeDisabled()
-  })
-
-  it('loading 加 aria-busy + class', () => {
-    const { container } = render(<TypingIndicator loading>加载</TypingIndicator>)
-    expect(screen.getByRole('button')).toHaveAttribute('aria-busy', 'true')
-    expect(container.querySelector('.ak-typing-indicator--loading')).toBeTruthy()
-  })
-})
-
-describe('TypingIndicator (Web) · 行为契约 (共享 spec)', () => {
-  for (const sc of buttonScenarios) {
-    it(sc.name, () => {
-      const onClick = vi.fn()
-      render(<TypingIndicator {...sc.props} onClick={onClick}>X</TypingIndicator>)
-      fireEvent.click(screen.getByRole('button'))
-      if (sc.onPressOutcome === 'callback-fired') {
-        expect(onClick).toHaveBeenCalledOnce()
-      } else {
-        expect(onClick).not.toHaveBeenCalled()
-      }
+describe('TypingIndicator (Web) · variant', () => {
+  for (const v of allVariants) {
+    it(`variant=${v} 加 ak-typing-indicator--${v} class`, () => {
+      const { container } = render(<TypingIndicator variant={v} />)
+      expect(container.querySelector(`.ak-typing-indicator--${v}`)).toBeTruthy()
     })
   }
-})
 
-describe('TypingIndicator (Web) · 双口径回调', () => {
-  it('onClick 跟 onPress 同时传 · 都触发', () => {
-    const onClick = vi.fn()
-    const onPress = vi.fn()
-    render(<TypingIndicator onClick={onClick} onPress={onPress}>X</TypingIndicator>)
-    fireEvent.click(screen.getByRole('button'))
-    expect(onClick).toHaveBeenCalledOnce()
-    expect(onPress).toHaveBeenCalledOnce()
+  it('default variant = dots', () => {
+    const { container } = render(<TypingIndicator />)
+    expect(container.querySelector('.ak-typing-indicator--dots')).toBeTruthy()
   })
 
-  it('只传 onPress · Web 端 click 也触发', () => {
-    const onPress = vi.fn()
-    render(<TypingIndicator onPress={onPress}>X</TypingIndicator>)
-    fireEvent.click(screen.getByRole('button'))
-    expect(onPress).toHaveBeenCalledOnce()
+  it('切 variant 不影响圆点数量 (始终 3 个)', () => {
+    for (const v of allVariants) {
+      const { container, unmount } = render(<TypingIndicator variant={v} />)
+      expect(container.querySelectorAll('.ak-typing-indicator__dot')).toHaveLength(3)
+      unmount()
+    }
   })
 })
 
-describe('TypingIndicator (Web) · 边界', () => {
-  it('空 children + 空 ariaLabel · 仍可渲染 (但不推荐 · TS 应警告)', () => {
+describe('TypingIndicator (Web) · size', () => {
+  for (const s of allSizes) {
+    it(`size=${s} 加 ak-typing-indicator--${s} class`, () => {
+      const { container } = render(<TypingIndicator size={s} />)
+      expect(container.querySelector(`.ak-typing-indicator--${s}`)).toBeTruthy()
+    })
+  }
+
+  it('default size = md', () => {
+    const { container } = render(<TypingIndicator />)
+    expect(container.querySelector('.ak-typing-indicator--md')).toBeTruthy()
+  })
+})
+
+describe('TypingIndicator (Web) · color', () => {
+  it('未传 color · 不注入 inline style', () => {
+    const { container } = render(<TypingIndicator />)
+    const root = container.querySelector('.ak-typing-indicator') as HTMLElement
+    // jsdom: 未注入时 cssText 为空
+    expect(root.style.getPropertyValue('--ak-typing-indicator-color')).toBe('')
+  })
+
+  it('传 color · 通过 CSS variable 注入', () => {
+    const { container } = render(<TypingIndicator color="#ff0066" />)
+    const root = container.querySelector('.ak-typing-indicator') as HTMLElement
+    expect(root.style.getPropertyValue('--ak-typing-indicator-color')).toBe('#ff0066')
+  })
+})
+
+describe('TypingIndicator (Web) · inBubble', () => {
+  it('default inBubble=true · 加 in-bubble class', () => {
+    const { container } = render(<TypingIndicator />)
+    expect(container.querySelector('.ak-typing-indicator--in-bubble')).toBeTruthy()
+  })
+
+  it('inBubble=false · 不加 in-bubble class', () => {
+    const { container } = render(<TypingIndicator inBubble={false} />)
+    expect(container.querySelector('.ak-typing-indicator--in-bubble')).toBeFalsy()
+  })
+})
+
+describe('TypingIndicator (Web) · a11y', () => {
+  it(`默认 aria-label = ${DEFAULT_ARIA_LABEL}`, () => {
     render(<TypingIndicator />)
-    expect(screen.getByRole('button')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveAttribute('aria-label', DEFAULT_ARIA_LABEL)
   })
 
-  it('type=submit · 提交表单', () => {
-    const onSubmit = vi.fn((e: React.FormEvent) => e.preventDefault())
-    render(
-      <form onSubmit={onSubmit}>
-        <TypingIndicator type="submit">提交</TypingIndicator>
-      </form>,
-    )
-    fireEvent.click(screen.getByRole('button'))
-    expect(onSubmit).toHaveBeenCalledOnce()
+  it('自定义 aria-label 覆盖默认', () => {
+    render(<TypingIndicator ariaLabel="AI 思考中" />)
+    expect(screen.getByRole('status')).toHaveAttribute('aria-label', 'AI 思考中')
+  })
+
+  it('aria-live=polite (动态通知不打断)', () => {
+    render(<TypingIndicator />)
+    expect(screen.getByRole('status')).toHaveAttribute('aria-live', 'polite')
+  })
+
+  it('圆点 aria-hidden · 不污染 a11y tree', () => {
+    const { container } = render(<TypingIndicator />)
+    const dots = container.querySelectorAll('.ak-typing-indicator__dot')
+    dots.forEach((d) => expect(d).toHaveAttribute('aria-hidden', 'true'))
   })
 })

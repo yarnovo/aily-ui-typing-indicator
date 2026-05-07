@@ -2,101 +2,186 @@
  * akong TypingIndicator · React Native 实现
  *
  * Metro bundler 默认按 `.native.tsx` 后缀解析 RN 端 · `.tsx` 解析 Web 端
- * 用方 `import { TypingIndicator } from '@akong/button'` 自动取对应平台
+ * 用方 `import { TypingIndicator } from '@akong/typing-indicator'` 自动取对应平台
+ *
+ * 实现策略:
+ *  - View 容器 · 3 Animated.View 圆点
+ *  - dots: translateY 跳动 · 错峰 delay 0 / 160 / 320 ms
+ *  - pulse: 同时 opacity 0.4 ↔ 1
+ *  - wave: scale 0.8 ↔ 1.2 错峰
+ *  - prefers-reduced-motion: AccessibilityInfo.isReduceMotionEnabled · 关 loop
  */
 
-import { Pressable, Text, View, ActivityIndicator, useColorScheme } from 'react-native'
+import { useEffect, useRef, useState } from 'react'
+import { Animated, AccessibilityInfo, Easing, View, useColorScheme } from 'react-native'
 import { tokens } from '@akong/tokens'
-import type { TypingIndicatorProps } from './TypingIndicator.types'
+import type { TypingIndicatorProps, TypingIndicatorSize } from './TypingIndicator.types'
+import {
+  DEFAULT_ARIA_LABEL,
+  animationDelaySec,
+  animationDurationSec,
+  dotGapPx,
+  dotSizePx,
+} from './TypingIndicator.behavior'
 
-const sizes = {
-  sm: { height: 32, paddingH: tokens.space[3], fontSize: tokens.text.sm },
-  md: { height: 40, paddingH: tokens.space[4], fontSize: tokens.text.base },
-  lg: { height: 48, paddingH: tokens.space[5], fontSize: tokens.text.md },
-} as const
+const DURATION_MS = animationDurationSec * 1000
+const HALF_MS = DURATION_MS / 2
 
-function variantStyles(variant: NonNullable<TypingIndicatorProps['variant']>, scheme: 'light' | 'dark') {
-  const t = scheme === 'dark' ? tokens.dark : tokens.light
-  switch (variant) {
-    case 'primary':
-      return { bg: t.fg, fg: t.fgInverse }
-    case 'secondary':
-      return { bg: t.bgSubtle, fg: t.fg }
-    case 'ghost':
-      return { bg: 'transparent', fg: t.fg }
-    case 'destructive':
-      return { bg: t.accent, fg: t.accentFg }
-    case 'link':
-      return { bg: 'transparent', fg: t.fg }
+function useReduceMotion(): boolean {
+  const [reduce, setReduce] = useState(false)
+  useEffect(() => {
+    let cancelled = false
+    AccessibilityInfo.isReduceMotionEnabled().then((v) => {
+      if (!cancelled) setReduce(!!v)
+    })
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', (v) => setReduce(!!v))
+    return () => {
+      cancelled = true
+      sub?.remove?.()
+    }
+  }, [])
+  return reduce
+}
+
+function useDotAnim(
+  variant: NonNullable<TypingIndicatorProps['variant']>,
+  index: number,
+  reduce: boolean,
+): Animated.Value {
+  const value = useRef(new Animated.Value(0)).current
+
+  useEffect(() => {
+    if (reduce) {
+      value.setValue(0)
+      return
+    }
+
+    // pulse 不错峰 · dots/wave 错峰
+    const delay = variant === 'pulse' ? 0 : animationDelaySec[index] * 1000
+
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(value, {
+          toValue: 1,
+          duration: HALF_MS,
+          delay,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(value, {
+          toValue: 0,
+          duration: HALF_MS,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+    )
+    loop.start()
+    return () => {
+      loop.stop()
+    }
+  }, [variant, index, reduce, value])
+
+  return value
+}
+
+function dotAnimatedStyle(
+  variant: NonNullable<TypingIndicatorProps['variant']>,
+  v: Animated.Value,
+) {
+  if (variant === 'dots') {
+    return {
+      transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [0, -4] }) }],
+    } as const
   }
+  if (variant === 'pulse') {
+    return {
+      opacity: v.interpolate({ inputRange: [0, 1], outputRange: [0.4, 1] }),
+    } as const
+  }
+  // wave
+  return {
+    transform: [{ scale: v.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1.2] }) }],
+  } as const
+}
+
+function bubbleStyles(scheme: 'light' | 'dark') {
+  const t = scheme === 'dark' ? tokens.dark : tokens.light
+  return {
+    backgroundColor: t.bgSubtle,
+    borderRadius: tokens.radius['2xl'] ?? 16,
+    padding: 12,
+  }
+}
+
+function defaultColor(scheme: 'light' | 'dark'): string {
+  const t = scheme === 'dark' ? tokens.dark : tokens.light
+  // tokens 没有显式 fgTertiary · 用 fgSubtle 接近 (灰 9 系)
+  return t.fgSubtle as string
+}
+
+function Dot(props: {
+  variant: NonNullable<TypingIndicatorProps['variant']>
+  index: number
+  size: TypingIndicatorSize
+  color: string
+  reduce: boolean
+}) {
+  const { variant, index, size, color, reduce } = props
+  const v = useDotAnim(variant, index, reduce)
+  const dim = dotSizePx[size]
+  const animStyle = dotAnimatedStyle(variant, v)
+  return (
+    <Animated.View
+      style={[
+        {
+          width: dim,
+          height: dim,
+          borderRadius: dim / 2,
+          backgroundColor: color,
+        },
+        // RN 类型严格 · transform 与 opacity 各占一份 · 这里 spread 直接接受
+        animStyle as object,
+      ]}
+    />
+  )
 }
 
 export function TypingIndicator(props: TypingIndicatorProps) {
   const {
-    variant = 'primary',
+    variant = 'dots',
     size = 'md',
-    disabled = false,
-    loading = false,
-    fullWidth = false,
-    iconLeft,
-    iconRight,
-    children,
-    onClick,
-    onPress,
-    ariaLabel,
+    color,
+    inBubble = true,
+    ariaLabel = DEFAULT_ARIA_LABEL,
   } = props
 
   const scheme = (useColorScheme() ?? 'light') as 'light' | 'dark'
-  const sz = sizes[size]
-  const v = variantStyles(variant, scheme)
-
-  const handle = () => {
-    if (disabled || loading) return
-    onClick?.()
-    onPress?.()
-  }
+  const reduce = useReduceMotion()
+  const dotColor = color ?? defaultColor(scheme)
+  const gap = dotGapPx[size]
 
   return (
-    <Pressable
-      onPress={handle}
+    <View
+      accessible
+      accessibilityRole="text"
       accessibilityLabel={ariaLabel}
-      accessibilityRole="button"
-      accessibilityState={{ disabled: disabled || loading, busy: loading }}
-      disabled={disabled || loading}
-      style={({ pressed }: { pressed: boolean }) => ({
-        height: variant === 'link' ? undefined : sz.height,
-        paddingHorizontal: variant === 'link' ? 0 : sz.paddingH,
-        backgroundColor: v.bg,
-        borderRadius: variant === 'link' ? 0 : tokens.radius.full,
-        flexDirection: 'row' as const,
-        alignItems: 'center' as const,
-        justifyContent: 'center' as const,
-        alignSelf: (fullWidth ? 'stretch' : 'flex-start') as 'stretch' | 'flex-start',
-        opacity: disabled ? 0.4 : pressed ? 0.7 : 1,
-        gap: tokens.space[2],
-      })}
+      accessibilityLiveRegion="polite"
+      style={[
+        {
+          flexDirection: 'row' as const,
+          alignItems: 'center' as const,
+          justifyContent: 'center' as const,
+          alignSelf: 'flex-start' as const,
+          gap,
+        },
+        inBubble && bubbleStyles(scheme),
+      ]}
     >
-      {loading ? (
-        <ActivityIndicator color={v.fg as string} />
-      ) : (
-        <>
-          {iconLeft && <View>{iconLeft}</View>}
-          {children && (
-            <Text
-              style={{
-                color: v.fg as string,
-                fontSize: sz.fontSize,
-                fontWeight: tokens.weight.medium,
-                textDecorationLine: variant === 'link' ? 'underline' : 'none',
-              }}
-            >
-              {children}
-            </Text>
-          )}
-          {iconRight && <View>{iconRight}</View>}
-        </>
-      )}
-    </Pressable>
+      <Dot variant={variant} index={0} size={size} color={dotColor} reduce={reduce} />
+      <Dot variant={variant} index={1} size={size} color={dotColor} reduce={reduce} />
+      <Dot variant={variant} index={2} size={size} color={dotColor} reduce={reduce} />
+    </View>
   )
 }
 

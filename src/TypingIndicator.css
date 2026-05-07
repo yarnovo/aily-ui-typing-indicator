@@ -1,139 +1,100 @@
-/* akong-button · Web 样式 · 用 var(--ak-*) 接 @akong/tokens */
+/* akong-typing-indicator · Web 样式 · 用 var(--ak-*) 接 @akong/tokens */
 
 .ak-typing-indicator {
+  /* 圆点颜色 · prop color 通过 inline --ak-typing-indicator-color 覆盖 */
+  --ak-typing-indicator-color: var(--ak-fg-tertiary);
+  /* 圆点尺寸 · 跟 size modifier 联动 */
+  --ak-typing-indicator-dot-size: 8px;
+  /* 圆点间隙 · 跟 size modifier 联动 */
+  --ak-typing-indicator-gap: 4px;
+
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--ak-space-2);
-  font-family: var(--ak-font-sans);
-  font-weight: var(--ak-weight-medium);
-  letter-spacing: var(--ak-tracking-tight);
-  border: 0;
-  border-radius: var(--ak-radius-full);
-  cursor: pointer;
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-  transition:
-    background-color var(--ak-duration-fast) var(--ak-ease-out),
-    color var(--ak-duration-fast) var(--ak-ease-out),
-    opacity var(--ak-duration-fast) var(--ak-ease-out);
-  white-space: nowrap;
-  outline: none;
+  gap: var(--ak-typing-indicator-gap);
+  /* 默认无气泡时尽量贴合内容 · padding 0 */
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  /* 视觉微调: 沿基线对齐文字 */
+  vertical-align: middle;
+  /* 防止外部 line-height 把 inline-flex 拉变形 */
+  line-height: 0;
 }
 
-.ak-typing-indicator:focus-visible {
-  outline: 2px solid var(--ak-border-strong);
-  outline-offset: 2px;
+/* === 圆点 base === */
+.ak-typing-indicator__dot {
+  display: inline-block;
+  width: var(--ak-typing-indicator-dot-size);
+  height: var(--ak-typing-indicator-dot-size);
+  border-radius: 50%;
+  background: var(--ak-typing-indicator-color);
+  /* 默认无动画 · 由 variant 注入 */
 }
 
-.ak-typing-indicator:active:not(:disabled) {
-  opacity: 0.7;
-}
-
-.ak-typing-indicator:disabled,
-.ak-typing-indicator[aria-disabled="true"] {
-  cursor: not-allowed;
-  opacity: 0.4;
-}
-
-/* === Sizes === */
+/* === Sizes (dot size + gap) === */
 .ak-typing-indicator--sm {
-  height: 32px;
-  padding: 0 var(--ak-space-3);
-  font-size: var(--ak-text-sm);
-  min-width: 32px;
+  --ak-typing-indicator-dot-size: 6px;
+  --ak-typing-indicator-gap: 3px;
 }
 .ak-typing-indicator--md {
-  height: 40px;
-  padding: 0 var(--ak-space-4);
-  font-size: var(--ak-text-base);
-  min-width: 40px;
+  --ak-typing-indicator-dot-size: 8px;
+  --ak-typing-indicator-gap: 4px;
 }
 .ak-typing-indicator--lg {
-  height: 48px;
-  padding: 0 var(--ak-space-5);
-  font-size: var(--ak-text-md);
-  min-width: 48px;
+  --ak-typing-indicator-dot-size: 10px;
+  --ak-typing-indicator-gap: 4px;
 }
 
-/* === Variants === */
-.ak-typing-indicator--primary {
-  background: var(--ak-fg);
-  color: var(--ak-fg-inverse);
-}
-.ak-typing-indicator--primary:hover:not(:disabled) {
-  background: var(--ak-gray-11);
-}
-
-.ak-typing-indicator--secondary {
+/* === inBubble: 套气泡风格 (assistant 气泡位置 · 左对齐) === */
+.ak-typing-indicator--in-bubble {
   background: var(--ak-bg-subtle);
-  color: var(--ak-fg);
-}
-.ak-typing-indicator--secondary:hover:not(:disabled) {
-  background: var(--ak-bg-hover);
-}
-
-.ak-typing-indicator--ghost {
-  background: transparent;
-  color: var(--ak-fg);
-}
-.ak-typing-indicator--ghost:hover:not(:disabled) {
-  background: var(--ak-bg-subtle);
+  border-radius: var(--ak-radius-2xl, 16px);
+  padding: 12px;
+  /* 让圆点在气泡里有合适的高度 (避免气泡塌成一条线) */
+  line-height: normal;
 }
 
-.ak-typing-indicator--destructive {
-  background: var(--ak-accent);
-  color: var(--ak-accent-fg);
+/* === Variant: dots · 依次跳动 (translateY -4px) === */
+.ak-typing-indicator--dots .ak-typing-indicator__dot {
+  animation: ak-typing-indicator-bounce 1.4s ease-in-out infinite;
 }
-.ak-typing-indicator--destructive:hover:not(:disabled) {
-  background: var(--ak-accent-10);
+.ak-typing-indicator--dots .ak-typing-indicator__dot:nth-child(1) { animation-delay: 0s; }
+.ak-typing-indicator--dots .ak-typing-indicator__dot:nth-child(2) { animation-delay: 0.16s; }
+.ak-typing-indicator--dots .ak-typing-indicator__dot:nth-child(3) { animation-delay: 0.32s; }
+
+/* === Variant: pulse · 同时 opacity 0.4 ↔ 1 === */
+.ak-typing-indicator--pulse .ak-typing-indicator__dot {
+  animation: ak-typing-indicator-pulse 1.4s ease-in-out infinite;
 }
 
-.ak-typing-indicator--link {
-  background: transparent;
-  color: var(--ak-fg);
-  padding: 0;
-  height: auto;
-  min-width: 0;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  text-decoration-color: var(--ak-border-strong);
+/* === Variant: wave · scale 0.8 ↔ 1.2 错峰 === */
+.ak-typing-indicator--wave .ak-typing-indicator__dot {
+  animation: ak-typing-indicator-wave 1.4s ease-in-out infinite;
 }
-.ak-typing-indicator--link:hover:not(:disabled) {
-  text-decoration-color: var(--ak-fg);
+.ak-typing-indicator--wave .ak-typing-indicator__dot:nth-child(1) { animation-delay: 0s; }
+.ak-typing-indicator--wave .ak-typing-indicator__dot:nth-child(2) { animation-delay: 0.16s; }
+.ak-typing-indicator--wave .ak-typing-indicator__dot:nth-child(3) { animation-delay: 0.32s; }
+
+/* === Keyframes === */
+@keyframes ak-typing-indicator-bounce {
+  0%, 60%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-4px); }
 }
 
-/* === Modifiers === */
-.ak-typing-indicator--full-width { width: 100%; }
-
-.ak-typing-indicator--loading {
-  pointer-events: none;
-  position: relative;
-  color: transparent !important;
-}
-.ak-typing-indicator--loading::after {
-  content: "";
-  position: absolute;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: 2px solid currentColor;
-  border-top-color: transparent;
-  color: var(--ak-fg-muted);
-  animation: ak-spin 0.7s linear infinite;
-}
-.ak-typing-indicator--primary.ak-typing-indicator--loading::after,
-.ak-typing-indicator--destructive.ak-typing-indicator--loading::after {
-  color: var(--ak-fg-inverse);
+@keyframes ak-typing-indicator-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
 }
 
-@keyframes ak-spin {
-  to { transform: rotate(360deg); }
+@keyframes ak-typing-indicator-wave {
+  0%, 60%, 100% { transform: scale(0.8); }
+  30% { transform: scale(1.2); }
 }
 
-.ak-typing-indicator__icon {
-  display: inline-flex;
-  align-items: center;
-  flex-shrink: 0;
+/* === a11y: 减少动画偏好 · 静态显示 === */
+@media (prefers-reduced-motion: reduce) {
+  .ak-typing-indicator__dot {
+    animation: none !important;
+  }
 }

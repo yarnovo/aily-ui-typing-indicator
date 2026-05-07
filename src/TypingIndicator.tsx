@@ -1,51 +1,39 @@
+import type { CSSProperties } from 'react'
 import type { TypingIndicatorProps } from './TypingIndicator.types'
+import { DEFAULT_ARIA_LABEL } from './TypingIndicator.behavior'
 import './TypingIndicator.css'
 
 const cls = (...parts: (string | false | undefined)[]) => parts.filter(Boolean).join(' ')
 
-/** akong TypingIndicator · Web · DOM `<button>` */
+/** akong TypingIndicator · Web · 3 圆点动画 (dots / pulse / wave) */
 export function TypingIndicator(props: TypingIndicatorProps) {
   const {
-    variant = 'primary',
+    variant = 'dots',
     size = 'md',
-    disabled = false,
-    loading = false,
-    fullWidth = false,
-    iconLeft,
-    iconRight,
-    children,
-    onClick,
-    onPress,
-    type = 'button',
-    ariaLabel,
+    color,
+    inBubble = true,
+    ariaLabel = DEFAULT_ARIA_LABEL,
   } = props
 
-  const handle = () => {
-    if (disabled || loading) return
-    onClick?.()
-    onPress?.()
-  }
+  const dotStyle = color ? ({ '--ak-typing-indicator-color': color } as CSSProperties) : undefined
 
   return (
-    <button
-      type={type}
+    <div
+      role="status"
+      aria-live="polite"
       aria-label={ariaLabel}
-      aria-busy={loading || undefined}
-      aria-disabled={disabled || undefined}
-      disabled={disabled}
-      onClick={handle}
       className={cls(
         'ak-typing-indicator',
         `ak-typing-indicator--${variant}`,
         `ak-typing-indicator--${size}`,
-        fullWidth && 'ak-typing-indicator--full-width',
-        loading && 'ak-typing-indicator--loading',
+        inBubble && 'ak-typing-indicator--in-bubble',
       )}
+      style={dotStyle}
     >
-      {iconLeft && <span className="ak-typing-indicator__icon">{iconLeft}</span>}
-      {children && <span>{children}</span>}
-      {iconRight && <span className="ak-typing-indicator__icon">{iconRight}</span>}
-    </button>
+      <span className="ak-typing-indicator__dot" aria-hidden="true" />
+      <span className="ak-typing-indicator__dot" aria-hidden="true" />
+      <span className="ak-typing-indicator__dot" aria-hidden="true" />
+    </div>
   )
 }
 
