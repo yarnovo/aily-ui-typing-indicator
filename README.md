@@ -1,5 +1,7 @@
 # @akong/typing-indicator
 
+> ← 回 [akong design system](https://yarnovo.github.io/akong-core/) 总站
+
 akong TypingIndicator · 极简 · 跨端 (Web + React Native)
 
 打字 / 思考动画 · 表示 AI / 对方正在输入 · 跨端一致。
