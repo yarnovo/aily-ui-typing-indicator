@@ -24,7 +24,7 @@
   .row { display: flex; gap: var(--ak-space-6); flex-wrap: wrap; align-items: center; padding: var(--ak-space-4); background: var(--ak-bg-subtle); border-radius: var(--ak-radius-md); }
   .cell { display: flex; flex-direction: column; align-items: flex-start; gap: var(--ak-space-2); }
   .label { font-size: var(--ak-text-sm); color: var(--ak-fg-subtle); }
-  .toggle { position: fixed; top: 16px; right: 16px; padding: 8px 12px; border-radius: var(--ak-radius-full); background: var(--ak-fg); color: var(--ak-bg); border: 0; font-size: var(--ak-text-sm); cursor: pointer; }
+  .toggle { position: fixed; top: 64px; right: 16px; padding: 8px 12px; border-radius: var(--ak-radius-full); background: var(--ak-fg); color: var(--ak-bg); border: 0; font-size: var(--ak-text-sm); cursor: pointer; }
   .chat-mock {
     background: var(--ak-bg);
     border: 1px solid var(--ak-border);
@@ -44,9 +44,29 @@
     max-width: 70%;
     font-size: var(--ak-text-sm);
   }
+  .back-to-index {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 100;
+    padding: 8px 16px;
+    background: var(--ak-bg-elevated);
+    border: 1px solid var(--ak-border-subtle);
+    border-radius: var(--ak-radius-full);
+    color: var(--ak-fg-muted);
+    text-decoration: none;
+    font-size: var(--ak-text-sm);
+    box-shadow: var(--ak-shadow-sm);
+    transition: all 0.2s;
+  }
+  .back-to-index:hover {
+    background: var(--ak-bg-hover);
+    color: var(--ak-fg);
+  }
 </style>
 </head>
 <body>
+  <a href="https://yarnovo.github.io/aily-ui-core/" class="back-to-index">← 回 aily-ui 总站</a>
   <button class="toggle" id="t">切换暗色</button>
   <h1>akong TypingIndicator</h1>
   <p class="sub">3 variant · 3 size · inBubble on/off · 跨 Web/RN · 一份 props · prefers-reduced-motion 自动关动画</p>
